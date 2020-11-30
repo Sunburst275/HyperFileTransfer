@@ -1,5 +1,6 @@
 # HyperFileTransfer
-Send your files to your HyperV-VM easily with this program.
+"Send your files to your HyperV-VM easily with this program."
+
 Using this program makes it easier to send multiple files from your host computer to your guest system when using Hyper-V virtual machines.
 [Work in Progress!]
 
