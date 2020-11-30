@@ -1,8 +1,6 @@
 # HyperFileTransfer
-"Send your files to your HyperV-VM easily with this program."
-
 Using this program makes it easier to send multiple files from your host computer to your guest system when using Hyper-V virtual machines.
-[Work in Progress!]
+[**Work in Progress!**]
 
 ## How it works
 It utilizes the PowerShell commands Copy-VMFile, Get-VM, etc. to execute the desired file copying.
