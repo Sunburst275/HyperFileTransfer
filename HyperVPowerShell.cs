@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
-using System.Management.Automation;
 using System.Security.Cryptography.X509Certificates;
 
 namespace HyperFileTransfer
@@ -55,9 +54,13 @@ namespace HyperFileTransfer
             bool errorOccured = false;
             Console.WriteLine("Starting PowerShell test...");
 
-            var ps = PowerShell.Create();
-            ps.AddCommand("systeminfo");
-            //ps.Invoke();
+            // --------------------------------------------------------------------------
+            
+            
+            
+            
+            
+            // --------------------------------------------------------------------------
 
             if (errorOccured)
             {
