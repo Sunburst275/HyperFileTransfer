@@ -9,17 +9,15 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
+
 namespace HyperFileTransfer
 {
     public partial class MainForm : Form
     {
         #region Variables
 
-        bool RunInBackground = true;
-        bool ForceExecution = true;
+        HyperVPowerShell hvps;
         List<string> files;
-        string DestinationSystem;
-        string DestinationPath;
 
         #endregion
         #region Constants
@@ -29,20 +27,20 @@ namespace HyperFileTransfer
         {
             InitializeComponent();
 
+            // Initialize HyperVPowerShell
+            hvps = new HyperVPowerShell();
+            files = new List<string>();
+
             // Initialize FileListViewButtons for FileListView
             FileListView_SelectedIndexChanged(this, EventArgs.Empty);
 
             // Initialize CheckBoxes
-            IsJobCheckBox.Checked = RunInBackground;
-            ForceExecutionCheckBox.Checked = ForceExecution;
+            IsJobCheckBox.Checked = hvps.RunInBackground;
+            ForceExecutionCheckBox.Checked = hvps.ForceExecution;
 
             // Initialize RadioButton
             DestinationSystemAutomaticRadioButton.Checked = true;
 
-            // Initialize Variables
-            files = new List<string>();
-            DestinationSystem = String.Empty;
-            DestinationPath = String.Empty;
 
             // TODO: Initialize ComboBox and add existent VM's
 
@@ -131,7 +129,7 @@ namespace HyperFileTransfer
             }
 
             // Get destination path on destination system
-            DestinationPath = DestinationPathTextBox.Text;
+            hvps.DestinationPath = DestinationPathTextBox.Text;
 
             // Destination system
             if (DestinationSystemAutomaticRadioButton.Checked)
@@ -141,17 +139,17 @@ namespace HyperFileTransfer
                     // TODO: Messagebox
                     return;
                 }
-                
-                DestinationSystem = DestinationSystemAutoComboBox.SelectedItem.ToString();
+
+                hvps.DestinationSystem = DestinationSystemAutoComboBox.SelectedItem.ToString();
             }
             else if (DestinationSystemManualRadioButton.Checked)
             {
-                DestinationSystem = DestinationSystemManualTextBox.Text;
+                hvps.DestinationSystem = DestinationSystemManualTextBox.Text;
             }
 
             // Get current settings
-            RunInBackground = IsJobCheckBox.Checked;
-            ForceExecution = ForceExecutionCheckBox.Checked;
+            hvps.RunInBackground = IsJobCheckBox.Checked;
+            hvps.ForceExecution = ForceExecutionCheckBox.Checked;
 
             // -----------------------------------------------------------
 
@@ -161,7 +159,7 @@ namespace HyperFileTransfer
                 // TODO: Show messagebox
                 return;
             }
-            if(DestinationSystem == null || DestinationSystem == String.Empty /* || "DestinationSystem.Exists" */)
+            if(hvps.DestinationSystem == null || hvps.DestinationSystem == String.Empty /* || "DestinationSystem.Exists" */)
             {
                 // TODO: Show messagebox
                 return;
@@ -173,10 +171,10 @@ namespace HyperFileTransfer
             // -----------------------------------------------------------
 
             Console.WriteLine("--[ Settings: ]-------------------------------------------");
-            Console.WriteLine($"DestinationPath\t=\t{DestinationPath}");
-            Console.WriteLine($"DestinationSystem\t=\t{DestinationSystem}");
-            Console.WriteLine($"RunInBackground\t=\t{RunInBackground}");
-            Console.WriteLine($"ForceExecution\t=\t{ForceExecution}");
+            Console.WriteLine($"DestinationPath\t=\t{hvps.DestinationPath}");
+            Console.WriteLine($"DestinationSystem\t=\t{hvps.DestinationSystem}");
+            Console.WriteLine($"RunInBackground\t=\t{hvps.RunInBackground}");
+            Console.WriteLine($"ForceExecution\t=\t{hvps.ForceExecution}");
 
             Console.WriteLine("\nSending...");
             int i = 0;
@@ -189,17 +187,17 @@ namespace HyperFileTransfer
                 sb.Append("\t");
                 sb.Append("Copy-VMFile");
                 sb.Append(" ");
-                sb.Append($"\"{DestinationSystem}\"");
+                sb.Append($"\"{hvps.DestinationSystem}\"");
                 sb.Append(" ");
                 sb.Append($"-SourcePath \"{s}\"");
                 sb.Append(" ");
-                sb.Append($"-DestinationPath \"{DestinationPath}\"");
-                if (ForceExecution)
+                sb.Append($"-DestinationPath \"{hvps.DestinationPath}\"");
+                if (hvps.ForceExecution)
                 {
                     sb.Append(" ");
                     sb.Append($"-Force");
                 }
-                if (RunInBackground)
+                if (hvps.RunInBackground)
                 {
                     sb.Append(" ");
                     sb.Append($"-AsJob");
@@ -234,11 +232,11 @@ namespace HyperFileTransfer
         #region Option CheckBox handling
         private void IsJobCheckBox_CheckedChanged(object sender, EventArgs e)
         {
-            RunInBackground = IsJobCheckBox.Checked;
+            hvps.RunInBackground = IsJobCheckBox.Checked;
         }
         private void ForceExecutionCheckBox_CheckedChanged(object sender, EventArgs e)
         {
-            ForceExecution = ForceExecutionCheckBox.Checked;
+            hvps.ForceExecution = ForceExecutionCheckBox.Checked;
         }
         #endregion
         #region Destination path handling
