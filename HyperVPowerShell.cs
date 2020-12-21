@@ -62,7 +62,6 @@ namespace HyperFileTransfer
 
             Process process = new Process();
             process.StartInfo.UseShellExecute = false;
-            process.OutputDataReceived += Process_OutputDataReceived;
             process.StartInfo.FileName = "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe";
             process.StartInfo.Arguments = "systeminfo";
             process.StartInfo.RedirectStandardOutput = true;
@@ -82,15 +81,6 @@ namespace HyperFileTransfer
             }
         }
 
-        private void Process_OutputDataReceived(object sender, DataReceivedEventArgs e)
-        {
-            Console.WriteLine("----- Process_OutputDataReceived -----------------------------------");
-            Console.WriteLine(e.Data.ToString());
-            Process process = (Process)sender;
-            Console.WriteLine(process.ToString());
-            Console.WriteLine("--------------------------------------------------------------------");
-        }
-
         public void SendFile()
         {
 
@@ -100,31 +90,48 @@ namespace HyperFileTransfer
         {
             Process process = new Process();
             string tempFile = Path.GetTempFileName();
+            string output;
             //string utilityPath = "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -ArgumentList Get-VM";
             string utilityPath = "powershell Get-VM";
             try
             {
                 process.StartInfo.CreateNoWindow = true;
                 process.StartInfo.UseShellExecute = true;
-                process.EnableRaisingEvents = true;
                 process.StartInfo.FileName = "cmd.exe";
                 process.StartInfo.Arguments = " /C \"" + utilityPath + " > \"" + tempFile + "\"\"";
                 Console.WriteLine(process.StartInfo.Arguments.ToString());
                 process.StartInfo.Verb = "runas";
                 process.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
-                process.OutputDataReceived += Process_OutputDataReceived;
                 process.Start();
                 process.WaitForExit();
             }
             finally
             {
-                string output = File.ReadAllText(tempFile);
-                //System.Diagnostics.Process.Start("explorer.exe", "/select, " + tempFile);
+                output = File.ReadAllText(tempFile);
                 File.Delete(tempFile);
                 Console.WriteLine("tempFileOutput: ---------------------------------");
                 Console.WriteLine(output);
                 Console.WriteLine("tempFileOutput Ende -----------------------------");
                 process.Dispose();
+            }
+
+            const string StateCondition = "Off";
+            string[] lines = output.Split('\n');
+            List<string> vms = new List<string>();
+            foreach (string line in lines)
+            {
+                if (!vms.Contains(StateCondition)) continue; // Skip lines which dont have the StateCondition
+                // TODO: Get StateCondition in line
+                // TODO: Get where StateCondition in line is
+                // TODO: Retrieve String (= vmName) from 0 to StateCondition's start
+                // TODO: Add vmName to vms
+            }
+            // TODO: If no accessable VM is existent, show MessageBox and flame "Check whether your VMs are online"
+
+            // DBG: Show whether all VMNames are retrieved acceptably
+            foreach (string vmname in vms)
+            {
+                Console.WriteLine(vmname);
             }
 
 
