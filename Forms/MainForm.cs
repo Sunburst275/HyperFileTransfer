@@ -119,6 +119,10 @@ namespace HyperFileTransfer
         private void HelpButton_Click(object sender, EventArgs e)
         {
             // TODO: Build and show Help-/About-Dialog
+
+            //hvps.Test();
+            hvps.GetAccessableVMs();
+
         }
         private void SendButton_Click(object sender, EventArgs e)
         {
