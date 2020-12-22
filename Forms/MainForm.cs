@@ -18,6 +18,7 @@ namespace HyperFileTransfer
 
         HyperVPowerShell hvps;
         List<string> files;
+        string[] accessableVMs;
 
         #endregion
         #region Constants
@@ -29,6 +30,8 @@ namespace HyperFileTransfer
 
             // Initialize HyperVPowerShell
             hvps = new HyperVPowerShell();
+            hvps.NoVmsAccessable += Hvps_NoVmsAccessable;
+            hvps.UserDeclinedCmdAdminRights += Hvps_UserDeclinedCmdAdminRights;
             files = new List<string>();
 
             // Initialize FileListViewButtons for FileListView
@@ -41,9 +44,16 @@ namespace HyperFileTransfer
             // Initialize RadioButton
             DestinationSystemAutomaticRadioButton.Checked = true;
 
-
-            // TODO: Initialize ComboBox and add existent VM's
-
+            // Initialize ComboBox and add existent VM's
+            accessableVMs = hvps.GetAccessableVMs();
+            RefreshDestinationSystemAutoComboBox();
+        }
+        private void Hvps_UserDeclinedCmdAdminRights(object sender, EventArgs e)
+        {
+            MessageBox.Show("You declined the execution of \"cmd.exe\" as administrator.\nIf you dont allow the program to execute it with elevated rights, the program cant work properly.\nPlease allow elevated rights for every action of this program.",
+                "Elevated rights required",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Exclamation);
         }
         #endregion
         #region GUI handling
@@ -120,8 +130,7 @@ namespace HyperFileTransfer
         {
             // TODO: Build and show Help-/About-Dialog
 
-            //hvps.Test();
-            hvps.GetAccessableVMs();
+            hvps.Test();
 
         }
         private void SendButton_Click(object sender, EventArgs e)
@@ -158,12 +167,12 @@ namespace HyperFileTransfer
             // -----------------------------------------------------------
 
             // Check for problems and show message
-            if(files == null || files.Count <= 0)
+            if (files == null || files.Count <= 0)
             {
                 // TODO: Show messagebox
                 return;
             }
-            if(hvps.DestinationSystem == null || hvps.DestinationSystem == String.Empty /* || "DestinationSystem.Exists" */)
+            if (hvps.DestinationSystem == null || hvps.DestinationSystem == String.Empty /* || "DestinationSystem.Exists" */)
             {
                 // TODO: Show messagebox
                 return;
@@ -213,7 +222,6 @@ namespace HyperFileTransfer
             }
             Console.WriteLine("----------------------------------------------------------");
 
-
             // Reset file list
             files.Clear();
         }
@@ -232,6 +240,28 @@ namespace HyperFileTransfer
             DestinationSystemAutoComboBox.Enabled = DestinationSystemAutomaticRadioButton.Checked;
             DestinationSystemManualTextBox.Enabled = DestinationSystemManualRadioButton.Checked;
         }
+        private void DestinationSystemAutoRefreshButton_Click(object sender, EventArgs e)
+        {
+            var res = MessageBox.Show("This action can take some time.\nPlease accept the cmd prompt to execute as administator and be patient.\nDo you want to continue?",
+                "Refresh VM list",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Exclamation);
+            if (res == DialogResult.Yes)
+            {
+                accessableVMs = hvps.GetAccessableVMs();
+                RefreshDestinationSystemAutoComboBox();
+            }
+        }
+        private void RefreshDestinationSystemAutoComboBox()
+        {
+            DestinationSystemAutoComboBox.Items.Clear();
+            if (accessableVMs == null) return;
+            foreach (string vm in accessableVMs)
+            {
+                DestinationSystemAutoComboBox.Items.Add(vm);
+            }
+            DestinationSystemAutoComboBox.SelectedIndex = 0;
+        }
         #endregion
         #region Option CheckBox handling
         private void IsJobCheckBox_CheckedChanged(object sender, EventArgs e)
@@ -246,7 +276,7 @@ namespace HyperFileTransfer
         #region Destination path handling
         private void DestinationPathClipboardButton_Click(object sender, EventArgs e)
         {
-            if(Clipboard.ContainsText())
+            if (Clipboard.ContainsText())
             {
                 DestinationPathTextBox.Text = Clipboard.GetText();
             }
@@ -277,6 +307,17 @@ namespace HyperFileTransfer
                 }
             }
         }
+        private void Hvps_NoVmsAccessable(object sender, EventArgs e)
+        {
+            var res = MessageBox.Show("There are no Virtual Machines available. Make sure the VM you are trying to access is running.",
+                "No Virtual Machine available",
+                MessageBoxButtons.RetryCancel,
+                MessageBoxIcon.Error);
+            if (res == DialogResult.Retry)
+            {
+                accessableVMs = hvps.GetAccessableVMs();
+            }
+        }
         #endregion
         #region Enums, Structs, etc.
         private enum DestinationMachineSelect
@@ -285,5 +326,6 @@ namespace HyperFileTransfer
             Auto
         }
         #endregion
+        
     }
 }

@@ -33,12 +33,37 @@ namespace HyperFileTransfer
         #endregion
         #region Delegates, Events
 
-        public delegate void StartedExecutionDelegate(object sender, EventArgs eventArgs);
-        public event StartedExecutionDelegate StartedExecution;
+        //public delegate void StartedExecutionDelegate(object sender, EventArgs eventArgs);
+        public event EventHandler StartedExecution;
 
-        public delegate void EndedExecutionDelegate(object sender, EventArgs eventArgs);
-        public event EndedExecutionDelegate EndedExecution;
+        //public delegate void EndedExecutionDelegate(object sender, EventArgs eventArgs);
+        public event EventHandler EndedExecution;
 
+        //public delegate void NoVmsAccessableDelegate(object sender, EventArgs eventArgs);
+        public event EventHandler NoVmsAccessable;
+
+        public event EventHandler UserDeclinedCmdAdminRights;
+
+        protected virtual void OnStartedExecution(object sender, EventArgs eventArgs)
+        {
+            EventHandler handler = EndedExecution;
+            handler?.Invoke(this, eventArgs);
+        }
+        protected virtual void OnEndedExecution(object sender, EventArgs eventArgs)
+        {
+            EventHandler handler = StartedExecution;
+            handler?.Invoke(this, eventArgs);
+        }
+        protected virtual void OnNoVmsAccessable(object sender, EventArgs eventArgs)
+        {
+            EventHandler handler = NoVmsAccessable;
+            handler?.Invoke(this, eventArgs);
+        }
+        protected virtual void OnUserDeclinedCmdAdminRights(object sender, EventArgs eventArgs)
+        {
+            EventHandler handler = UserDeclinedCmdAdminRights;
+            handler?.Invoke(this, eventArgs);
+        }
         #endregion
         #region Constructors, Initialization, etc.
         public HyperVPowerShell() // TODO: Make customizable Powershell ctor?
@@ -88,10 +113,11 @@ namespace HyperFileTransfer
 
         public string[] GetAccessableVMs()
         {
+            // Get VMs and description
             Process process = new Process();
             string tempFile = Path.GetTempFileName();
             string output;
-            //string utilityPath = "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -ArgumentList Get-VM";
+            //string utilityPath = "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe Get-VM";
             string utilityPath = "powershell Get-VM";
             try
             {
@@ -105,44 +131,65 @@ namespace HyperFileTransfer
                 process.Start();
                 process.WaitForExit();
             }
+            catch(System.ComponentModel.Win32Exception)
+            {
+                OnUserDeclinedCmdAdminRights(this, EventArgs.Empty);
+                return null;
+            }
             finally
             {
                 output = File.ReadAllText(tempFile);
                 File.Delete(tempFile);
-                Console.WriteLine("tempFileOutput: ---------------------------------");
-                Console.WriteLine(output);
-                Console.WriteLine("tempFileOutput Ende -----------------------------");
                 process.Dispose();
             }
 
+            // Filter VM names
+            //const string StateCondition = "Running";
             const string StateCondition = "Off";
             string[] lines = output.Split('\n');
             List<string> vms = new List<string>();
             foreach (string line in lines)
             {
-                if (!vms.Contains(StateCondition)) continue; // Skip lines which dont have the StateCondition
-                // TODO: Get StateCondition in line
-                // TODO: Get where StateCondition in line is
-                // TODO: Retrieve String (= vmName) from 0 to StateCondition's start
-                // TODO: Add vmName to vms
-            }
-            // TODO: If no accessable VM is existent, show MessageBox and flame "Check whether your VMs are online"
+                if (!line.Contains(StateCondition)) continue; // Skip lines which dont have the StateCondition
+                int startIndex = -1;
+                var cLine = line.ToCharArray();
+                var cStateCondition = StateCondition.ToCharArray();
+                // Get where StateCondition in line is
+                for(int i = 0; i < cLine.Length; i++)
+                {
+                    if (i + StateCondition.Length > line.Length) break; // If out of bounds, break
+                    for(int c = 0; c < StateCondition.Length; c++)      // Search for start index of StateCondition
+                    {
+                        if (cLine[i + c] == cStateCondition[c])
+                        {
+                            startIndex = i;
+                        }
+                        else
+                        {
+                            startIndex = -1;
+                        }
+                    }
+                    if (startIndex != -1) break;
+                }
 
+                // Retrieve String (= vmName) from 0 to StateCondition's start and add vmName to vms
+                vms.Add(line.Substring(0, startIndex).Trim());
+            }
             // DBG: Show whether all VMNames are retrieved acceptably
             foreach (string vmname in vms)
             {
                 Console.WriteLine(vmname);
             }
+            if (vms.Count <= 0) // No VMs accessable (because none is running)
+            {
+                OnNoVmsAccessable(this, EventArgs.Empty);
+                return null;
+            }
 
-
-            return null;
+            return vms.ToArray();
         }
 
 
         #endregion
-
-
-
-
     }
 }
