@@ -13,8 +13,6 @@ namespace HyperFileTransfer
         #region Variables
 
         int startedProcesses = 0;
-        List<StreamReader> ProcessOutputStreams;
-
         #region Internal
         private string _DestinationPath;
         private string _DestinationSystem;
@@ -39,8 +37,8 @@ namespace HyperFileTransfer
         //public delegate void EndedExecutionDelegate(object sender, EventArgs eventArgs);
         public event EventHandler EndedExecution;
 
-        //public delegate void NoVmsAccessableDelegate(object sender, EventArgs eventArgs);
-        public event EventHandler NoVmsAccessable;
+        //public delegate void NoVmsAccessibleDelegate(object sender, EventArgs eventArgs);
+        public event EventHandler NoVmsAccessible;
 
         public event EventHandler UserDeclinedCmdAdminRights;
 
@@ -54,9 +52,9 @@ namespace HyperFileTransfer
             EventHandler handler = StartedExecution;
             handler?.Invoke(this, eventArgs);
         }
-        protected virtual void OnNoVmsAccessable(object sender, EventArgs eventArgs)
+        protected virtual void OnNoVmsAccessible(object sender, EventArgs eventArgs)
         {
-            EventHandler handler = NoVmsAccessable;
+            EventHandler handler = NoVmsAccessible;
             handler?.Invoke(this, eventArgs);
         }
         protected virtual void OnUserDeclinedCmdAdminRights(object sender, EventArgs eventArgs)
@@ -66,14 +64,12 @@ namespace HyperFileTransfer
         }
         #endregion
         #region Constructors, Initialization, etc.
-        public HyperVPowerShell() // TODO: Make customizable Powershell ctor?
+        public HyperVPowerShell()
         {
             this.DestinationSystem = String.Empty;
             this.DestinationPath = String.Empty;
             this.RunInBackground = true;
             this.ForceExecution = true;
-
-            ProcessOutputStreams = new List<StreamReader>();
         }
         #endregion
         #region PowerShell execution
@@ -91,7 +87,6 @@ namespace HyperFileTransfer
             process.StartInfo.Arguments = "systeminfo";
             process.StartInfo.RedirectStandardOutput = true;
             process.Start();
-            ProcessOutputStreams.Add(process.StandardOutput);
 
             // --------------------------------------------------------------------------
 
@@ -102,16 +97,30 @@ namespace HyperFileTransfer
             else
             {
                 Console.WriteLine("PowerShell test ended without (an) error(s).");
-                Console.WriteLine(ProcessOutputStreams[0].ReadToEnd());
             }
         }
-
-        public void SendFile()
+        /// <summary></summary>
+        /// <returns>True if files were sent successfully, otherwise false.</returns>
+        public bool SendFiles()
         {
+            // TODO: Implement
 
+
+            return true;
         }
 
-        public string[] GetAccessableVMs()
+        public bool SendFile(string file)
+        {
+            // TODO: Implement
+
+
+
+            return true;
+        }
+
+        /// <summary>Gets all accessible VMs by the Get-VM cmdlet and </summary>
+        /// <returns>A string array of all accessible Virtual Machines (which are running).</returns>
+        public string[] GetAccessibleVMs()
         {
             // Get VMs and description
             Process process = new Process();
@@ -131,7 +140,7 @@ namespace HyperFileTransfer
                 process.Start();
                 process.WaitForExit();
             }
-            catch(System.ComponentModel.Win32Exception)
+            catch (System.ComponentModel.Win32Exception)
             {
                 OnUserDeclinedCmdAdminRights(this, EventArgs.Empty);
                 return null;
@@ -155,10 +164,10 @@ namespace HyperFileTransfer
                 var cLine = line.ToCharArray();
                 var cStateCondition = StateCondition.ToCharArray();
                 // Get where StateCondition in line is
-                for(int i = 0; i < cLine.Length; i++)
+                for (int i = 0; i < cLine.Length; i++)
                 {
                     if (i + StateCondition.Length > line.Length) break; // If out of bounds, break
-                    for(int c = 0; c < StateCondition.Length; c++)      // Search for start index of StateCondition
+                    for (int c = 0; c < StateCondition.Length; c++)      // Search for start index of StateCondition
                     {
                         if (cLine[i + c] == cStateCondition[c])
                         {
@@ -180,12 +189,11 @@ namespace HyperFileTransfer
             {
                 Console.WriteLine(vmname);
             }
-            if (vms.Count <= 0) // No VMs accessable (because none is running)
+            if (vms.Count <= 0) // No VMs accessible (because none is running)
             {
-                OnNoVmsAccessable(this, EventArgs.Empty);
+                OnNoVmsAccessible(this, EventArgs.Empty);
                 return null;
             }
-
             return vms.ToArray();
         }
 

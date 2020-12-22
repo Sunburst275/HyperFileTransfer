@@ -18,7 +18,7 @@ namespace HyperFileTransfer
 
         HyperVPowerShell hvps;
         List<string> files;
-        string[] accessableVMs;
+        string[] accessibleVMs;
 
         #endregion
         #region Constants
@@ -30,7 +30,7 @@ namespace HyperFileTransfer
 
             // Initialize HyperVPowerShell
             hvps = new HyperVPowerShell();
-            hvps.NoVmsAccessable += Hvps_NoVmsAccessable;
+            hvps.NoVmsAccessible += Hvps_NoVmsAccessible;
             hvps.UserDeclinedCmdAdminRights += Hvps_UserDeclinedCmdAdminRights;
             files = new List<string>();
 
@@ -45,19 +45,11 @@ namespace HyperFileTransfer
             DestinationSystemAutomaticRadioButton.Checked = true;
 
             // Initialize ComboBox and add existent VM's
-            accessableVMs = hvps.GetAccessableVMs();
+            accessibleVMs = hvps.GetAccessibleVMs();
             RefreshDestinationSystemAutoComboBox();
-        }
-        private void Hvps_UserDeclinedCmdAdminRights(object sender, EventArgs e)
-        {
-            MessageBox.Show("You declined the execution of \"cmd.exe\" as administrator.\nIf you dont allow the program to execute it with elevated rights, the program cant work properly.\nPlease allow elevated rights for every action of this program.",
-                "Elevated rights required",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Exclamation);
         }
         #endregion
         #region GUI handling
-
         #region ListView button handling
         private void FileListView_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -145,44 +137,69 @@ namespace HyperFileTransfer
             hvps.DestinationPath = DestinationPathTextBox.Text;
 
             // Destination system
+            bool noDestinationSystemChosen = false;
             if (DestinationSystemAutomaticRadioButton.Checked)
             {
-                if (DestinationSystemAutoComboBox.SelectedItem == null)
+                if (DestinationSystemAutoComboBox.SelectedItem == null ||
+                    string.IsNullOrEmpty(DestinationSystemAutoComboBox.SelectedItem.ToString()))
                 {
-                    // TODO: Messagebox
-                    return;
+                    noDestinationSystemChosen = true;
                 }
-
-                hvps.DestinationSystem = DestinationSystemAutoComboBox.SelectedItem.ToString();
+                else
+                {
+                    hvps.DestinationSystem = DestinationSystemAutoComboBox.SelectedItem.ToString();
+                }
             }
             else if (DestinationSystemManualRadioButton.Checked)
             {
-                hvps.DestinationSystem = DestinationSystemManualTextBox.Text;
+                if (string.IsNullOrEmpty(DestinationSystemManualTextBox.Text))
+                {
+                    noDestinationSystemChosen = true;
+                }
+                else
+                {
+                    hvps.DestinationSystem = DestinationSystemManualTextBox.Text;
+                }
             }
 
             // Get current settings
             hvps.RunInBackground = IsJobCheckBox.Checked;
             hvps.ForceExecution = ForceExecutionCheckBox.Checked;
 
-            // -----------------------------------------------------------
-
-            // Check for problems and show message
+            // ------------------------------------------------------------------------------------
+            // Check for problems and show messages accordingly
             if (files == null || files.Count <= 0)
             {
-                // TODO: Show messagebox
+                MessageBox.Show("No file(s) selected.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 return;
             }
-            if (hvps.DestinationSystem == null || hvps.DestinationSystem == String.Empty /* || "DestinationSystem.Exists" */)
+            if (hvps.DestinationSystem == null || hvps.DestinationSystem == String.Empty)
             {
-                // TODO: Show messagebox
+                MessageBox.Show("The destination system is not available.", "System not available", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 return;
             }
-
-            // TODO: Check whether VM exists
-            // TODO: Check whether VM is running
-
-            // -----------------------------------------------------------
-
+            if (noDestinationSystemChosen)
+            {
+                MessageBox.Show("You did not select any destination System.", "System not selected", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                return;
+            }
+            // Check whether DestinationSystem exists
+            bool systemAccessible = false;
+            foreach (string system in accessibleVMs)
+            {
+                if (system.Equals(hvps.DestinationSystem))
+                {
+                    systemAccessible = true;
+                    break;
+                }
+            }
+            if (!systemAccessible)
+            {
+                MessageBox.Show("The selected destination system is not available.", "System not selected", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                return;
+            }
+            // ------------------------------------------------------------------------------------
+            // DGB: Theoretical settings and possibilities
             Console.WriteLine("--[ Settings: ]-------------------------------------------");
             Console.WriteLine($"DestinationPath\t=\t{hvps.DestinationPath}");
             Console.WriteLine($"DestinationSystem\t=\t{hvps.DestinationSystem}");
@@ -221,9 +238,28 @@ namespace HyperFileTransfer
                 Console.WriteLine(sb.ToString());
             }
             Console.WriteLine("----------------------------------------------------------");
+            // DBG: End ...
 
             // Reset file list
             files.Clear();
+
+            bool success = hvps.SendFiles();
+            if (success)
+            {
+                var res = MessageBox.Show("Files sent successfully. Do you want to clear the file list?",
+                    "Success",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question);
+
+                if (res == DialogResult.Yes)
+                {
+                    FileListView.Items.Clear();
+                }
+            }
+            else
+            {
+                // TODO: Messagebox "error occured"
+            }
         }
         #endregion
         #region Destination machine RadioButton handling
@@ -248,15 +284,15 @@ namespace HyperFileTransfer
                 MessageBoxIcon.Exclamation);
             if (res == DialogResult.Yes)
             {
-                accessableVMs = hvps.GetAccessableVMs();
+                accessibleVMs = hvps.GetAccessibleVMs();
                 RefreshDestinationSystemAutoComboBox();
             }
         }
         private void RefreshDestinationSystemAutoComboBox()
         {
             DestinationSystemAutoComboBox.Items.Clear();
-            if (accessableVMs == null) return;
-            foreach (string vm in accessableVMs)
+            if (accessibleVMs == null) return;
+            foreach (string vm in accessibleVMs)
             {
                 DestinationSystemAutoComboBox.Items.Add(vm);
             }
@@ -287,7 +323,6 @@ namespace HyperFileTransfer
                 DestinationPathTextBox.Text = string.Empty;
         }
         #endregion
-
         #endregion
         #region Helper
         private void LockGUI(bool @lock = true)
@@ -307,7 +342,7 @@ namespace HyperFileTransfer
                 }
             }
         }
-        private void Hvps_NoVmsAccessable(object sender, EventArgs e)
+        private void Hvps_NoVmsAccessible(object sender, EventArgs e)
         {
             var res = MessageBox.Show("There are no Virtual Machines available. Make sure the VM you are trying to access is running.",
                 "No Virtual Machine available",
@@ -315,8 +350,15 @@ namespace HyperFileTransfer
                 MessageBoxIcon.Error);
             if (res == DialogResult.Retry)
             {
-                accessableVMs = hvps.GetAccessableVMs();
+                accessibleVMs = hvps.GetAccessibleVMs();
             }
+        }
+        private void Hvps_UserDeclinedCmdAdminRights(object sender, EventArgs e)
+        {
+            MessageBox.Show("You declined the execution of \"cmd.exe\" as administrator.\nIf you dont allow the program to execute it with elevated rights, the program cant work properly.\nPlease allow elevated rights for every action of this program.",
+                "Elevated rights required",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Exclamation);
         }
         #endregion
         #region Enums, Structs, etc.
@@ -326,6 +368,6 @@ namespace HyperFileTransfer
             Auto
         }
         #endregion
-        
+
     }
 }
