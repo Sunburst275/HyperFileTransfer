@@ -1,10 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Collections.Generic;
 using System.Text;
-using System.Threading.Tasks;
-using System.Security.Cryptography.X509Certificates;
 
 namespace HyperFileTransfer
 {
@@ -99,23 +97,66 @@ namespace HyperFileTransfer
                 Console.WriteLine("PowerShell test ended without (an) error(s).");
             }
         }
-        /// <summary></summary>
-        /// <returns>True if files were sent successfully, otherwise false.</returns>
-        public bool SendFiles()
+
+        public void SendFile(string file)
         {
-            // TODO: Implement
+            // TODO: Build exceptions for error handling
+            // TODO: Create new thread in which this is executed
+            // ERROR: "VirtualizationException", unbekannter Fehler -> Kann Datei nicht auf Zielsystem senden...
+            // ERROR: "... hat kein Abschlusszeichen" -> In der cmd.exe wird als Argument irgendwie nur " ' " angezeigt...
 
+            StringBuilder arguments = new StringBuilder();
+            {
+                // Standard command
+                arguments.Append("Copy-VMFile");
+                arguments.Append(" ");
 
-            return true;
-        }
+                // Settings related stuff
+                arguments.Append($"\'{this.DestinationSystem}\'");
+                arguments.Append(" ");
+                arguments.Append($"-SourcePath \'{file}\'");
+                arguments.Append(" ");
+                arguments.Append($"-DestinationPath \'{this.DestinationPath}\'");
+                if (this.ForceExecution)
+                {
+                    arguments.Append(" ");
+                    arguments.Append($"-Force");
+                }
+                arguments.Append(" ");
+                arguments.Append("-CreateFullPath -FileSource Host");
+            }
 
-        public bool SendFile(string file)
-        {
-            // TODO: Implement
+            Process p = new Process();
+            try
+            {
+                //p.StartInfo.CreateNoWindow = true;
+                //p.StartInfo.UseShellExecute = true;
+                //p.StartInfo.FileName = "powershell.exe";
+                //p.StartInfo.Arguments = arguments.ToString();
+                //p.StartInfo.Verb = "runas";
+                //p.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+                //p.Start();
+                //p.WaitForExit();
 
-
-
-            return true;
+                // DBG: Test config
+                p.StartInfo.CreateNoWindow = false;
+                p.StartInfo.UseShellExecute = true;
+                p.StartInfo.FileName = "cmd.exe";
+                p.StartInfo.Arguments = "/k" + " " + "\"" + "powershell.exe" + " " + arguments.ToString() + "\"";
+                p.StartInfo.Verb = "runas";
+                p.StartInfo.WindowStyle = ProcessWindowStyle.Maximized;
+                p.Start();
+                p.WaitForExit();
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+            finally
+            {
+                Console.WriteLine($"Run cmdlet:\n{p.StartInfo.Arguments}");
+                p.Dispose();
+            }
         }
 
         /// <summary>Gets all accessible VMs by the Get-VM cmdlet and </summary>
@@ -153,8 +194,8 @@ namespace HyperFileTransfer
             }
 
             // Filter VM names
-            //const string StateCondition = "Running";
-            const string StateCondition = "Off";
+            const string StateCondition = "Running";
+            //const string StateCondition = "Off";
             string[] lines = output.Split('\n');
             List<string> vms = new List<string>();
             foreach (string line in lines)

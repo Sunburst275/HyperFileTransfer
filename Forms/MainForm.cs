@@ -200,53 +200,34 @@ namespace HyperFileTransfer
             }
             // ------------------------------------------------------------------------------------
             // DGB: Theoretical settings and possibilities
-            Console.WriteLine("--[ Settings: ]-------------------------------------------");
-            Console.WriteLine($"DestinationPath\t=\t{hvps.DestinationPath}");
-            Console.WriteLine($"DestinationSystem\t=\t{hvps.DestinationSystem}");
-            Console.WriteLine($"RunInBackground\t=\t{hvps.RunInBackground}");
-            Console.WriteLine($"ForceExecution\t=\t{hvps.ForceExecution}");
+            //Console.WriteLine("--[ Settings: ]-------------------------------------------");
+            //Console.WriteLine($"DestinationPath\t=\t{hvps.DestinationPath}");
+            //Console.WriteLine($"DestinationSystem\t=\t{hvps.DestinationSystem}");
+            //Console.WriteLine($"RunInBackground\t=\t{hvps.RunInBackground}");
+            //Console.WriteLine($"ForceExecution\t=\t{hvps.ForceExecution}");
 
-            Console.WriteLine("\nSending...");
             int i = 0;
+            bool success = true;
             foreach (string s in files)
             {
-                if (!File.Exists(s)) continue; // Skip non-existent files
-
-                StringBuilder sb = new StringBuilder();
-                sb.Append($"[{i++}]");
-                sb.Append("\t");
-                sb.Append("Copy-VMFile");
-                sb.Append(" ");
-                sb.Append($"\"{hvps.DestinationSystem}\"");
-                sb.Append(" ");
-                sb.Append($"-SourcePath \"{s}\"");
-                sb.Append(" ");
-                sb.Append($"-DestinationPath \"{hvps.DestinationPath}\"");
-                if (hvps.ForceExecution)
+                if (!File.Exists(s)) continue;  // Skip non-existent files
+                try
                 {
-                    sb.Append(" ");
-                    sb.Append($"-Force");
+                    hvps.SendFile(s);
                 }
-                if (hvps.RunInBackground)
+                catch (Exception) // TODO: Catch custom exception // Create exception!
                 {
-                    sb.Append(" ");
-                    sb.Append($"-AsJob");
+                    success = false;
                 }
-                sb.Append(" ");
-                sb.Append("-CreateFullPath -FileSource Host");
-
-                Console.WriteLine(sb.ToString());
             }
-            Console.WriteLine("----------------------------------------------------------");
-            // DBG: End ...
 
             // Reset file list
             files.Clear();
 
-            bool success = hvps.SendFiles();
+            // Send files
             if (success)
             {
-                var res = MessageBox.Show("Files sent successfully. Do you want to clear the file list?",
+                var res = MessageBox.Show("File(s) sent successfully. Do you want to clear the file list?",
                     "Success",
                     MessageBoxButtons.YesNo,
                     MessageBoxIcon.Question);
@@ -320,7 +301,10 @@ namespace HyperFileTransfer
         private void DestinationPathClearButton_Click(object sender, EventArgs e)
         {
             if (DestinationPathTextBox.Text != null || DestinationPathTextBox.Text != String.Empty)
+            {
                 DestinationPathTextBox.Text = string.Empty;
+                // TODO: Tab focus on this txt field
+            }
         }
         #endregion
         #endregion
